@@ -17,9 +17,9 @@ try:
 except Exception as e:
     print(f"ERROR: GEE initialization failed: {e}")
 
+# This endpoint is kept but will not be used by the new map page
 @app.route('/api/map', methods=['GET'])
 def get_methane_map():
-    # ... (This function is correct and remains unchanged)
     background_threshold = int(request.args.get('threshold', 1920))
     selected_date_str = request.args.get('date')
     center_lon = -119.5
@@ -43,6 +43,8 @@ def get_methane_map():
     map_info = methane_spots.getMapId(spot_style)
     return jsonify({'tileUrl': map_info['tile_fetcher'].url_format})
 
+
+# --- UPDATED: This endpoint now fetches GLOBAL plume data ---
 @app.route('/api/carbonmapper', methods=['GET'])
 def get_carbonmapper_plumes():
     api_key = os.getenv('CARBONMAPPER_API_KEY')
@@ -53,13 +55,13 @@ def get_carbonmapper_plumes():
     headers = {"Authorization": f"Bearer {api_key}"}
 
     end_time = datetime.datetime.now(datetime.timezone.utc)
-    start_time = end_time - datetime.timedelta(days=365)
+    start_time = end_time - datetime.timedelta(days=365) # Last year of data
     
+    # --- CHANGE: Removed 'bbox' to get global data ---
     params = {
-        "bbox": [-124.5, 32.5, -114.1, 42.0],
         "datetime": f"{start_time.isoformat().replace('+00:00', 'Z')}/{end_time.isoformat().replace('+00:00', 'Z')}",
         "plume_gas": "CH4",
-        "limit": 1000
+        "limit": 5000 # Limit to 5000 plumes to keep it fast
     }
 
     try:
@@ -68,17 +70,13 @@ def get_carbonmapper_plumes():
         
         items = response.json().get('items', [])
         
-        # --- THIS IS THE FIX ---
-        # Reformat the data into valid GeoJSON Features that Leaflet can understand.
+        # Reformat the data into valid GeoJSON that Leaflet can understand
         formatted_features = []
         for item in items:
-            # Create a properties object with all data EXCEPT the geometry
             properties = {key: value for key, value in item.items() if key != 'geometry_json'}
-            
-            # Create the correctly formatted GeoJSON feature
             feature = {
                 "type": "Feature",
-                "geometry": item.get('geometry_json'), # Use the correct key and rename it to "geometry"
+                "geometry": item.get('geometry_json'),
                 "properties": properties
             }
             formatted_features.append(feature)

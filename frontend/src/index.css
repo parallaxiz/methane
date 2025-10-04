@@ -34,13 +34,13 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
-/* ... (your existing CSS rules) ... */
+//* ... (your existing CSS rules) ... */
 
 /* --- NEW: CSS for Marker Clusters --- */
 .marker-cluster-small,
 .marker-cluster-medium,
 .marker-cluster-large {
-  background-color: rgba(121, 80, 169, 0.7); /* A nice purple color with some transparency */
+  background-color: rgba(121, 80, 169, 0.7); /* A purple color with some transparency */
   border: 2px solid rgba(86, 40, 140, 1);
   box-shadow: 0 0 5px #333;
 }
@@ -65,4 +65,3 @@ code {
   border-radius: 8px;
   font-family: "Poppins", sans-serif;
 }
-
