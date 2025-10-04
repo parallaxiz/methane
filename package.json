@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@mui/x-date-pickers": "^8.12.0",
-    "dayjs": "^1.11.18"
+    "dayjs": "^1.11.18",
+    "leaflet.markercluster": "^1.5.3",
+    "react-leaflet-markercluster": "^5.0.0-rc.0"
   }
 }

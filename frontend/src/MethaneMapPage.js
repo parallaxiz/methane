@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Slider, Typography, Box, Select, MenuItem, InputLabel, FormControl, Button, CircularProgress, Switch, FormControlLabel, Paper } from '@mui/material';
+import { Slider, Typography, Box, Select, MenuItem, InputLabel, FormControl, Button, CircularProgress, Switch, FormControlLabel, Paper, Grid } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -41,8 +41,13 @@ function MethaneMapPage() {
             setIsCarbonMapperLoading(true);
             setCarbonMapperData(null);
             fetch('http://127.0.0.1:5000/api/carbonmapper').then(res => res.json()).then(data => {
-                if (data.features) setCarbonMapperData(data);
-                else if (data.error) setError("Failed to load high-res plumes.");
+                if (data.features && data.features.length > 0) {
+                    setCarbonMapperData(data);
+                } else if (data.error) {
+                    setError("Failed to load high-res plumes.");
+                } else {
+                    setError("No high-resolution plumes found in the selected area.");
+                }
             }).catch(err => setError("Failed to load high-res plumes.")).finally(() => setIsCarbonMapperLoading(false));
         }
     }, [showCarbonMapper]);
@@ -57,73 +62,66 @@ function MethaneMapPage() {
         <LocalizationProvider dateAdapter={AdapterDayjs}>
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 
-                {/* --- UPDATED: Top Controls Bar with larger components --- */}
-                <Paper 
-                    elevation={4} 
-                    sx={{ 
-                        padding: '24px 32px',
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '40px',
-                        flexWrap: 'wrap', 
-                        zIndex: 1100,
-                    }}
-                >
-                    <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Controls:</Typography>
+                <Paper elevation={4} sx={{ padding: '16px', zIndex: 1100 }}>
+                    <Grid container alignItems="center" spacing={4}>
+                        <Grid>
+                            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Controls:</Typography>
+                        </Grid>
 
-                    <FormControl sx={{ minWidth: 200 }}>
-                        <InputLabel>Basemap</InputLabel>
-                        <Select value={basemap} label="Basemap" onChange={(e) => setBasemap(e.target.value)}>
-                            <MenuItem value={'SATELLITE'}>Satellite</MenuItem>
-                            <MenuItem value={'ROADMAP'}>Roadmap</MenuItem>
-                        </Select>
-                    </FormControl>
+                        <Grid>
+                            <FormControl sx={{ minWidth: 220 }}>
+                                <InputLabel>Basemap</InputLabel>
+                                <Select value={basemap} label="Basemap" onChange={(e) => setBasemap(e.target.value)}>
+                                    <MenuItem value={'SATELLITE'}>Satellite</MenuItem>
+                                    <MenuItem value={'ROADMAP'}>Roadmap</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <DatePicker 
-                            label="Satellite Date" 
-                            value={selectedDate} 
-                            onChange={(newValue) => setSelectedDate(newValue)} 
-                            disableFuture 
-                            sx={{ minWidth: 320 }} 
-                        />
-                        <Button variant="outlined" onClick={() => setSelectedDate(null)} sx={{ height: '56px', px: 4 }}>
-                            Latest
-                        </Button>
-                    </Box>
+                        <Grid>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <DatePicker 
+                                    label="Satellite Date" 
+                                    value={selectedDate} 
+                                    onChange={(newValue) => setSelectedDate(newValue)} 
+                                    disableFuture 
+                                    sx={{ minWidth: 340 }}
+                                />
+                                <Button variant="contained" onClick={() => setSelectedDate(null)} sx={{ height: '56px', px: 4, fontSize: '1rem' }}>
+                                    Latest
+                                </Button>
+                            </Box>
+                        </Grid>
 
-                    <Box sx={{ minWidth: 550, flexGrow: .2   }}>
-                        <Typography variant="body1" gutterBottom>Sensitivity ({threshold} ppb)</Typography>
-                        <Slider 
-                            value={threshold} 
-                            onChange={(e, newValue) => setThreshold(newValue)} 
-                            min={1850} max={2000} step={5} 
-                            sx={{
-                                // Make the slider track thicker
-                                '& .MuiSlider-track': { height: 6 },
-                                '& .MuiSlider-rail': { height: 6 },
-                                // Make the slider thumb larger
-                                '& .MuiSlider-thumb': { height: 20, width: 20 },
-                            }}
-                        />
-                    </Box>
+                        <Grid xs>
+                            <Box sx={{ minWidth: 300 }}>
+                                <Typography variant="body1" gutterBottom>Sensitivity ({threshold} ppb)</Typography>
+                                <Slider 
+                                    value={threshold} 
+                                    onChange={(e, newValue) => setThreshold(newValue)} 
+                                    min={1850} max={2000} step={5} 
+                                    sx={{ '& .MuiSlider-track': { height: 8 }, '& .MuiSlider-rail': { height: 8 }, '& .MuiSlider-thumb': { height: 24, width: 24 } }}
+                                />
+                            </Box>
+                        </Grid>
 
-                    <FormControlLabel
-                        control={
-                            <Switch 
-                                checked={showCarbonMapper} 
-                                onChange={(e) => setShowCarbonMapper(e.target.checked)} 
-                                // Scale the switch to be larger
-                                sx={{ transform: 'scale(1.4)', mx: 1 }}
+                        <Grid>
+                            <FormControlLabel
+                                control={
+                                    <Switch 
+                                        checked={showCarbonMapper} 
+                                        onChange={(e) => setShowCarbonMapper(e.target.checked)} 
+                                        sx={{ transform: 'scale(1.5)', mx: 1 }}
+                                    />
+                                }
+                                label={<Typography variant="body1" sx={{ fontWeight: 500 }}>High-Res Plumes</Typography>}
+                                sx={{ mr: 2 }}
                             />
-                        }
-                        label="High-Res Plumes"
-                    />
-                     {isCarbonMapperLoading && <CircularProgress size={28} />}
-
+                             {isCarbonMapperLoading && <CircularProgress size={28} />}
+                        </Grid>
+                    </Grid>
                 </Paper>
 
-                {/* --- MAP DISPLAY (Unchanged) --- */}
                 <Box sx={{ flexGrow: 1, position: 'relative' }}>
                     <MapContainer center={[36.5, -119.5]} zoom={6} style={{ height: '100%', width: '100%' }}>
                         <TileLayer url={basemaps[basemap]} attribution='&copy; Google / OpenStreetMap contributors' subdomains={['mt0', 'mt1', 'mt2', 'mt3']} />
@@ -136,8 +134,11 @@ function MethaneMapPage() {
                                 data={carbonMapperData}
                                 pointToLayer={(feature, latlng) => L.circleMarker(latlng, plumePointStyle)}
                                 onEachFeature={(feature, layer) => {
+                                    // --- THIS IS THE FIX ---
+                                    // Use the correct property names from the API: 'plume_id' and 'emission_auto'
                                     if (feature.properties) {
-                                        layer.bindPopup(`<b>Source ID:</b> ${feature.properties.source_id}<br/><b>Methane Rate:</b> ${feature.properties.qmethane.value} kg/hr`);
+                                        const emissionRate = feature.properties.emission_auto ? `${feature.properties.emission_auto.toFixed(2)} kg/hr` : 'Not available';
+                                        layer.bindPopup(`<b>Plume ID:</b> ${feature.properties.plume_id}<br/><b>Methane Rate:</b> ${emissionRate}`);
                                     }
                                 }}
                             />
@@ -153,3 +154,4 @@ function MethaneMapPage() {
 }
 
 export default MethaneMapPage;
+
