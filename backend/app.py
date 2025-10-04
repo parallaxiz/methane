@@ -2,6 +2,11 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import ee
 import datetime
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
@@ -25,24 +30,20 @@ def get_methane_map():
         .select('CH4_column_volume_mixing_ratio_dry_air') \
         .filterBounds(filter_point)
 
-    methane_data = None # Initialize as None
+    methane_data = None
 
     if selected_date_str:
         start_date = ee.Date(selected_date_str)
         end_date = start_date.advance(1, 'day')
-        # Check if the collection for that day is empty BEFORE creating an image
         daily_collection = methane_collection.filterDate(start_date, end_date)
         if daily_collection.size().getInfo() > 0:
             methane_data = daily_collection.mean()
     else:
         methane_data = methane_collection.sort('system:time_start', False).first()
 
-    # --- NEW CHECK: If methane_data is still None, there's no data ---
     if methane_data is None:
-        # Return an empty response so the frontend knows there's no map
         return jsonify({'tileUrl': None, 'message': 'No data available for the selected date.'})
 
-    # --- The rest of your code runs only if there IS data ---
     methane_spots = methane_data.updateMask(methane_data.gt(background_threshold))
     
     peak_threshold = background_threshold + 100 
@@ -58,5 +59,38 @@ def get_methane_map():
         'tileUrl': map_info['tile_fetcher'].url_format
     })
 
+
+@app.route('/api/carbonmapper', methods=['GET'])
+def get_carbonmapper_plumes():
+    api_key = os.getenv('CARBONMAPPER_API_KEY')
+    if not api_key:
+        return jsonify({"error": "Carbon Mapper API key not configured on the server"}), 500
+
+    carbon_mapper_url = "https://api.carbonmapper.org/api/v1/plumes"
+    headers = { 
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    # --- FIX: Add a date range to the request to make it more specific ---
+    end_date = datetime.datetime.now()
+    start_date = end_date - datetime.timedelta(days=365) # Look for plumes in the last year
+
+    params = {
+        # Bounding box for California as a comma-separated string
+        "bbox": "-124.5,31.5,-114.5,41.5",
+        # Add start and end dates in the required format
+        "start_date": start_date.strftime('%Y-%m-%d'),
+        "end_date": end_date.strftime('%Y-%m-%d')
+    }
+
+    try:
+        response = requests.get(carbon_mapper_url, headers=headers, params=params)
+        response.raise_for_status() # Raise an error for bad responses (4xx or 5xx)
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"ERROR: Could not fetch from Carbon Mapper API: {e}")
+        return jsonify({"error": "Failed to fetch data from Carbon Mapper"}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+

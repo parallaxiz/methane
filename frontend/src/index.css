@@ -11,3 +11,26 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+/* Add this @font-face rule at the top of the file */
+@font-face {
+  font-family: 'Thugolatz';
+  /* The src path is relative to the location of this CSS file */
+  src: url('C:\Users\vedm1\OneDrive\Documents\studies\edi\methane-mapper\frontend\assets\fonts\thugolatz.ttf') format('truetype');
+  /* Add other formats if you have them, e.g., .woff2 */
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
