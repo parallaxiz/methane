@@ -1,23 +1,58 @@
 import React, { useState } from 'react';
-
-// Import ThemeProvider and createTheme
 import { Box, AppBar, Toolbar, Button, Typography, CssBaseline } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import MethaneMapPage from './MethaneMapPage';
 import HomePage from './HomePage';
 
-// Create a custom theme with the Poppins font and a larger base size
+// Create a custom theme to set default component sizes
 const theme = createTheme({
   typography: {
-    // Set the font family to Poppins
     fontFamily: '"Poppins", "Helvetica", "Arial", sans-serif',
-    
-    // Increase the base font size (default is 14)
-    fontSize: 30  ,
-
+    fontSize: 24,
+    h6: {
+      fontSize: '1.75rem',
+    },
     button: {
-      textTransform: 'none' // Optional: Makes button text look cleaner
+      textTransform: 'none',
+      fontWeight: 500,
     }
+  },
+  // NEW: Add a components section to set default props and styles
+  components: {
+    MuiButton: {
+      defaultProps: {
+        size: 'large', // Make all buttons larger by default
+      },
+    },
+    MuiTextField: {
+      defaultProps: {
+        variant: 'outlined',
+        size: 'medium', // Set the default for text fields (used by DatePicker)
+      },
+    },
+    MuiSelect: {
+      defaultProps: {
+        size: 'large', // Set the default for dropdowns
+      },
+    },
+    MuiSlider: {
+      styleOverrides: {
+        // Increase the size of the slider
+        root: {
+          height: 10,
+        },
+        thumb: {
+          height: 24,
+          width: 24,
+        },
+        track: {
+          height: 8,
+        },
+        rail: {
+          height: 8,
+        },
+      },
+    },
   },
 });
 
@@ -35,7 +70,6 @@ function App() {
   };
 
   return (
-    // Wrap the entire app in the ThemeProvider to apply the theme
     <ThemeProvider theme={theme}>
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
         <CssBaseline />

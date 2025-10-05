@@ -1,27 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
+
 import { Slider, Typography, Box, Select, MenuItem, InputLabel, FormControl, Button, CircularProgress, Paper, Grid } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
 function MethaneMapPage() {
-    const [layerType, setLayerType] = useState('gee');
+    // --- State for controls ---
+    const [layerType, setLayerType] = useState('gee'); // 'gee' or 'carbonMapper'
     const [selectedDate, setSelectedDate] = useState(null);
     const [threshold, setThreshold] = useState(1920);
     const [basemap, setBasemap] = useState('SATELLITE');
+
+    // --- State for data and loading ---
     const [geeTileUrl, setGeeTileUrl] = useState('');
     const [carbonMapperData, setCarbonMapperData] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // useEffect for fetching GEE satellite data
     useEffect(() => {
         if (layerType !== 'gee') {
-            setGeeTileUrl('');
+            setGeeTileUrl(''); // Clear GEE tiles if not selected
             return;
         }
+
         setIsLoading(true);
         setError(null);
         let apiUrl = `http://127.0.0.1:5000/api/map?threshold=${threshold}`;
@@ -37,13 +46,16 @@ function MethaneMapPage() {
         }).catch(err => setError('Failed to load satellite data.')).finally(() => setIsLoading(false));
     }, [selectedDate, threshold, layerType]);
 
+    // useEffect for fetching Carbon Mapper data
     useEffect(() => {
         if (layerType !== 'carbonMapper') {
-            setCarbonMapperData(null);
+            setCarbonMapperData(null); // Clear data if not selected
             return;
         }
+
         setIsLoading(true);
         setError(null);
+        setCarbonMapperData(null);
         fetch('http://127.0.0.1:5000/api/carbonmapper').then(res => res.json()).then(data => {
             if (data.features && data.features.length > 0) {
                 setCarbonMapperData(data);
@@ -65,11 +77,13 @@ function MethaneMapPage() {
     return (
         <LocalizationProvider dateAdapter={AdapterDayjs}>
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Paper elevation={4} sx={{ padding: '16px', zIndex: 1100 }}>
-                    <Grid container alignItems="center" spacing={4}>
-                         <Grid><Typography variant="h5" sx={{ fontWeight: 'bold' }}>Controls:</Typography></Grid>
+                <Paper elevation={4} sx={{ padding: '40px', zIndex: 1100 ,paddingTop: '50px',gap:'30'}}>
+                    <Grid container alignItems="center" spacing={3}>
+                        <Grid><Typography variant="h5" sx={{ fontWeight: 'bold', }}>Controls:</Typography></Grid>
+                        
+                        {/* --- NEW: Dropdown for Layer Type --- */}
                         <Grid>
-                            <FormControl sx={{ minWidth: 240 }}>
+                            <FormControl sx={{ minWidth: 340 }}>
                                 <InputLabel>Data Layer</InputLabel>
                                 <Select value={layerType} label="Data Layer" onChange={(e) => setLayerType(e.target.value)}>
                                     <MenuItem value={'gee'}>Satellite Heatmap</MenuItem>
@@ -77,8 +91,9 @@ function MethaneMapPage() {
                                 </Select>
                             </FormControl>
                         </Grid>
+                        
                         <Grid>
-                            <FormControl sx={{ minWidth: 220 }}>
+                            <FormControl sx={{ minWidth: 320 }}>
                                 <InputLabel>Basemap</InputLabel>
                                 <Select value={basemap} label="Basemap" onChange={(e) => setBasemap(e.target.value)}>
                                     <MenuItem value={'SATELLITE'}>Satellite</MenuItem>
@@ -86,8 +101,10 @@ function MethaneMapPage() {
                                 </Select>
                             </FormControl>
                         </Grid>
+                        
+                        {/* --- Controls for GEE (conditionally disabled) --- */}
                         <Grid>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, opacity: isGeeDisabled ? 0.4 : 1, transition: 'opacity 0.3s' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', opacity: isGeeDisabled ? 0 : 1, transition: 'opacity 0.3s' }}>
                                 <DatePicker 
                                     label="Satellite Date" 
                                     value={selectedDate} 
@@ -96,13 +113,13 @@ function MethaneMapPage() {
                                     sx={{ minWidth: 240 }}
                                     disabled={isGeeDisabled}
                                 />
-                                <Button variant="contained" onClick={() => setSelectedDate(null)} sx={{ height: '56px', px: 4, fontSize: '1rem' }} disabled={isGeeDisabled}>
+                                <Button variant="contained" onClick={() => setSelectedDate(null)} sx={{ height: '56px', px: 5, fontSize: '2rem' }} disabled={isGeeDisabled}>
                                     Latest
                                 </Button>
                             </Box>
                         </Grid>
-                        <Grid xs>
-                            <Box sx={{ minWidth: 300, opacity: isGeeDisabled ? 0.4 : 1, transition: 'opacity 0.3s' }}>
+                        <Grid >
+                            <Box sx={{ minWidth: 300, opacity: isGeeDisabled ? 0.0 : 1, transition: 'opacity 0.3s' }}>
                                 <Typography variant="body1" gutterBottom>Sensitivity ({threshold} ppb)</Typography>
                                 <Slider 
                                     value={threshold} 
@@ -120,32 +137,29 @@ function MethaneMapPage() {
                     <MapContainer center={[36.5, -119.5]} zoom={7} style={{ height: '100%', width: '100%' }}>
                         <TileLayer url={basemaps[basemap]} attribution='&copy; Google / OpenStreetMap contributors' subdomains={['mt0', 'mt1', 'mt2', 'mt3']} />
                         
+                        {/* Conditionally render the selected layer */}
                         {layerType === 'gee' && geeTileUrl && (
                             <TileLayer key={geeTileUrl} url={geeTileUrl} attribution="Google Earth Engine | Copernicus" opacity={0.7} zIndex={10} />
                         )}
 
-                        {/* --- NEW METHOD: Render CircleMarkers directly --- */}
-                        {layerType === 'carbonMapper' && carbonMapperData &&
-                            carbonMapperData.features.map(feature => {
-                                const { geometry, properties } = feature;
-                                const latLng = [geometry.coordinates[1], geometry.coordinates[0]];
-                                const emissionRate = properties.emission_auto ? `${properties.emission_auto.toFixed(2)} kg/hr` : 'Not available';
+                        {layerType === 'carbonMapper' && carbonMapperData && (
+                            <MarkerClusterGroup>
+                                {carbonMapperData.features.map(feature => {
+                                    const { geometry, properties } = feature;
+                                    const latLng = [geometry.coordinates[1], geometry.coordinates[0]];
+                                    const emissionRate = properties.emission_auto ? `${properties.emission_auto.toFixed(2)} kg/hr` : 'Not available';
 
-                                return (
-                                    <CircleMarker
-                                        key={properties.plume_id}
-                                        center={latLng}
-                                        pathOptions={{ fillColor: '#ff4d4d', fillOpacity: 0.9, color: 'white', weight: 1.5 }}
-                                        radius={8}
-                                    >
-                                        <Popup>
-                                            <b>Plume ID:</b> {properties.plume_id}<br/>
-                                            <b>Methane Rate:</b> {emissionRate}
-                                        </Popup>
-                                    </CircleMarker>
-                                );
-                            })
-                        }
+                                    return (
+                                        <Marker key={properties.plume_id} position={latLng}>
+                                            <Popup>
+                                                <b>Plume ID:</b> {properties.plume_id}<br/>
+                                                <b>Methane Rate:</b> {emissionRate}
+                                            </Popup>
+                                        </Marker>
+                                    );
+                                })}
+                            </MarkerClusterGroup>
+                        )}
                     </MapContainer>
 
                     {isLoading && <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 20 }}><CircularProgress color="inherit" sx={{ color: 'white' }} /></Box>}
@@ -156,4 +170,4 @@ function MethaneMapPage() {
     );
 }
 
-export default MethaneMapPage;  
+export default MethaneMapPage;

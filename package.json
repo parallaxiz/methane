@@ -1,16 +1,12 @@
-{
-  "name": "methane-mapper",
-  "version": "1.0.0",
-  "scripts": {
-    "start": "concurrently \"cd backend && python app.py\" \"cd frontend && npm start\""
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  },
-  "dependencies": {
-    "@changey/react-leaflet-markercluster": "^4.0.0-rc1",
-    "@mui/x-date-pickers": "^8.12.0",
-    "dayjs": "^1.11.18",
-    "leaflet.markercluster": "^1.5.3"
-  }
-}
+    {
+      "name": "methane-mapper",
+      "version": "1.0.0",
+      "private": true,
+      "scripts": {
+        "start": "concurrently \"cd backend && python app.py\" \"cd frontend && npm start\""
+      },
+      "devDependencies": {
+        "concurrently": "^8.2.2"
+      }
+    }
+    

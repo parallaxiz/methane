@@ -34,7 +34,7 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
-//* ... (your existing CSS rules) ... */
+/* ... (your existing CSS rules) ... */
 
 /* --- NEW: CSS for Marker Clusters --- */
 .marker-cluster-small,
