@@ -1,12 +1,15 @@
-    {
+{
       "name": "methane-mapper",
       "version": "1.0.0",
       "private": true,
       "scripts": {
-        "start": "concurrently \"cd backend && python app.py\" \"cd frontend && npm start\""
+            "start": "concurrently \"cd backend && python app.py\" \"cd frontend && npm start\""
       },
       "devDependencies": {
-        "concurrently": "^8.2.2"
+            "concurrently": "^8.2.2"
+      },
+      "dependencies": {
+            "leaflet": "^1.9.4",
+            "react-leaflet": "^5.0.0"
       }
-    }
-    
+}

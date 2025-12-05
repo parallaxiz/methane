@@ -3,6 +3,7 @@ import { Box, AppBar, Toolbar, Button, Typography, CssBaseline } from '@mui/mate
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import MethaneMapPage from './MethaneMapPage';
 import HomePage from './HomePage';
+import './App.css';
 
 // Create a custom theme to set default component sizes
 const theme = createTheme({
@@ -96,3 +97,7 @@ function App() {
 }
 
 export default App;
+
+
+
+
