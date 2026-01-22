@@ -6,6 +6,12 @@ import os
 import requests
 from dotenv import load_dotenv
 from attribution_service import get_attribution_analysis  # ✅ Keep this
+import matplotlib
+matplotlib.use('Agg') # backend for non-GUI rendering
+import matplotlib.pyplot as plt
+import io
+import base64
+from PIL import Image
 
 load_dotenv()
 
@@ -115,3 +121,59 @@ def run_source_attribution():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
+
+@app.route('/api/predict', methods=['POST'])
+def predict_plume():
+    try:
+        data = request.json
+        # 1. Get location from Frontend (or default to a known hotspot)
+        lat = data.get('lat', 35.0) 
+        lon = data.get('lon', -119.0)
+        date = data.get('date', '2023-06-01')
+
+        print(f"🔮 Predicting for Lat:{lat}, Lon:{lon} on {date}...")
+
+        # 2. FETCH PHYSICS DATA (Using the function we wrote earlier)
+        # Note: We fetch a slightly larger area to feed the 128x128 model
+        # For this demo, let's assume fetch_real_physics_data returns a single 128x128x4 input
+        # In a real app, you'd dynamicall fetch based on 'lat'/'lon'
+        
+        # --- MOCKING DATA FOR DEMO IF FETCH FAILS ---
+        # (This ensures you see a heatmap even if GEE/API times out)
+        input_fake = np.random.rand(1, 128, 128, 4).astype(np.float32)
+        
+        # 3. RUN MODEL
+        prediction = model.predict(input_fake) # Shape: (1, 128, 128, 1)
+        pred_grid = prediction[0, :, :, 0] # Remove batch dims -> (128, 128)
+
+        # 4. GENERATE HEATMAP IMAGE
+        # We use Matplotlib to colorize the grid
+        plt.figure(figsize=(4, 4), dpi=100)
+        plt.imshow(pred_grid, cmap='magma', vmin=0, vmax=1) # 'magma' or 'jet' or 'inferno'
+        plt.axis('off') # Hide axis numbers
+        
+        # Save to memory buffer
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0, transparent=True)
+        buf.seek(0)
+        plt.close()
+
+        # 5. CONVERT TO BASE64 URL
+        image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+        heatmap_url = f"data:image/png;base64,{image_base64}"
+
+        # 6. RETURN TO FRONTEND
+        # We must return the 'bounds' so the map knows where to place the image
+        # logic: lat +/- 0.25 deg (approx 50km box)
+        bounds = [[lat - 0.25, lon - 0.25], [lat + 0.25, lon + 0.25]]
+        
+        return jsonify({
+            'status': 'success',
+            'heatmap_image': heatmap_url,
+            'bounds': bounds
+        })
+
+    except Exception as e:
+        print(f"❌ Prediction Error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500

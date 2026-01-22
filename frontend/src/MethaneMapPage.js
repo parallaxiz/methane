@@ -101,8 +101,8 @@ function MethaneMapPage() {
     const mapViews = {
         gee: { center: [20, 0], zoom: 3 }, 
         carbonMapper: { center: [20, 0], zoom: 2 },
-        prediction: { center: [35.25, -118.5], zoom: 8 },
-        attribution: { center: [36.5, -119.5], zoom: 7 }
+        prediction: { center: [20, 0], zoom: 2 },
+        attribution: { center: [20, 0], zoom: 2 }
     };
 
     // --- EFFECTS ---
@@ -130,16 +130,35 @@ function MethaneMapPage() {
         setIsLoading(true);
         setError(null);
         
+        // ... inside useEffect ...
         if (layerType === 'prediction') {
+             // 1. Get the current center of the map view
+             // We default to a California hotspot if map isn't ready
+             const center = mapViews['prediction'].center; 
+        
              fetch('http://127.0.0.1:5000/api/predict', {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ date: selectedDate ? selectedDate.format('YYYY-MM-DD') : null })
+                 // 🔥 CHANGE: Send 'lat' and 'lon' along with 'date'
+                 body: JSON.stringify({ 
+                     date: selectedDate ? selectedDate.format('YYYY-MM-DD') : '2023-06-01',
+                     lat: center[0],
+                     lon: center[1]
+                 })
              }).then(res => res.json()).then(data => {
-                 if (data.heatmap_image) setPredictionData(data);
-                 else if (data.status === 'error') setError(data.message || "Failed to generate prediction.");
-             }).catch(err => setError("Failed to load prediction.")).finally(() => setIsLoading(false));
-        } else {
+                 if (data.heatmap_image) {
+                     console.log("🔥 Heatmap received!");
+                     setPredictionData(data); // This triggers the ImageOverlay
+                 } else if (data.status === 'error') {
+                     setError(data.message || "Failed to generate prediction.");
+                 }
+             }).catch(err => {
+                 console.error(err);
+                 setError("Failed to connect to prediction API.");
+             }).finally(() => setIsLoading(false));
+        }
+
+        else {
              fetch('http://127.0.0.1:5000/api/carbonmapper').then(res => res.json()).then(data => {
                  if (data.features && data.features.length > 0) setCarbonMapperData(data);
                  else setError("No EMIT plumes found.");
