@@ -9,7 +9,19 @@ import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import './MethaneMap.css'; 
 import factoriesData from './data/factories.js'; 
 
-import { Slider, Typography, Box, Button, CircularProgress, Paper, Grid, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+// 🔥 UPDATED IMPORTS: Added Drawer, List, Icons for the Sidebar
+import { 
+    Slider, Typography, Box, Button, CircularProgress, Paper, Grid, 
+    FormControl, InputLabel, Select, MenuItem, Drawer, IconButton, 
+    List, ListItem, ListItemText, Divider, Radio, RadioGroup, FormControlLabel 
+} from '@mui/material';
+import { 
+    Close as CloseIcon, 
+    Analytics as AnalyticsIcon, 
+    ArrowUpward as ArrowUpwardIcon, 
+    ArrowDownward as ArrowDownwardIcon 
+} from '@mui/icons-material';
+
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -74,6 +86,11 @@ function MethaneMapPage() {
     const [factoryData, setFactoryData] = useState([]); 
     const [showFactories, setShowFactories] = useState(false);
 
+    // 🔥 NEW FILTERING STATE (Added for EMIT Sidebar)
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [plumeLimit, setPlumeLimit] = useState('all'); // 'top10', 'bottom10', 'all'
+    const [sortDirection, setSortDirection] = useState('desc'); // 'asc' or 'desc'
+
     // 🔥 ADDED METHANE LAYER URL
     const METHANE_LAYER_URL = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?TIME=2023-10-01&layer=MODIS_Terra_Aerosol&tilematrixset=250m&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image%2Fpng&TileMatrix={z}&TileCol={x}&TileRow={y}";
 
@@ -130,16 +147,11 @@ function MethaneMapPage() {
         setIsLoading(true);
         setError(null);
         
-        // ... inside useEffect ...
         if (layerType === 'prediction') {
-             // 1. Get the current center of the map view
-             // We default to a California hotspot if map isn't ready
              const center = mapViews['prediction'].center; 
-        
              fetch('http://127.0.0.1:5000/api/predict', {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
-                 // 🔥 CHANGE: Send 'lat' and 'lon' along with 'date'
                  body: JSON.stringify({ 
                      date: selectedDate ? selectedDate.format('YYYY-MM-DD') : '2023-06-01',
                      lat: center[0],
@@ -147,18 +159,14 @@ function MethaneMapPage() {
                  })
              }).then(res => res.json()).then(data => {
                  if (data.heatmap_image) {
-                     console.log("🔥 Heatmap received!");
-                     setPredictionData(data); // This triggers the ImageOverlay
+                     setPredictionData(data); 
                  } else if (data.status === 'error') {
                      setError(data.message || "Failed to generate prediction.");
                  }
              }).catch(err => {
-                 console.error(err);
                  setError("Failed to connect to prediction API.");
              }).finally(() => setIsLoading(false));
-        }
-
-        else {
+        } else {
              fetch('http://127.0.0.1:5000/api/carbonmapper').then(res => res.json()).then(data => {
                  if (data.features && data.features.length > 0) setCarbonMapperData(data);
                  else setError("No EMIT plumes found.");
@@ -171,6 +179,26 @@ function MethaneMapPage() {
     };
 
     const isGeeDisabled = layerType !== 'gee';
+
+    // 🔥 HELPER: Process Data for EMIT Tab (Sort/Filter)
+    const getProcessedPlumes = () => {
+        if (!carbonMapperData || !carbonMapperData.features) return [];
+        
+        // 1. Sort
+        let features = [...carbonMapperData.features].sort((a, b) => {
+            const valA = a.properties.emission_auto || 0;
+            const valB = b.properties.emission_auto || 0;
+            return sortDirection === 'desc' ? valB - valA : valA - valB;
+        });
+
+        // 2. Limit (Top 10 / Bottom 10)
+        if (plumeLimit === 'top10') return features.slice(0, 10);
+        if (plumeLimit === 'bottom10') return features.slice(-10);
+        
+        return features;
+    };
+
+    const processedPlumes = getProcessedPlumes();
 
     // --- REUSABLE MAP COMPONENT ---
     const RenderMap = () => (
@@ -195,7 +223,21 @@ function MethaneMapPage() {
                                     onClick={loadFactories}
                                     sx={{ backgroundColor: '#4fd1c7', color: '#0f0f23', fontWeight: 'bold' }}
                                 >
-                                Source Attribution
+                                    Source Attribution
+                                </Button>
+                            </Grid>
+                        )}
+
+                        {/* 🔥 NEW BUTTON: Advanced Analysis (Only for EMIT Viz) */}
+                        {activePage === 'emit-viz' && (
+                            <Grid item>
+                                <Button 
+                                    variant="contained" 
+                                    onClick={() => setIsSidebarOpen(true)}
+                                    startIcon={<AnalyticsIcon />}
+                                    sx={{ backgroundColor: '#4fd1c7', color: '#0f0f23', fontWeight: 'bold' }}
+                                >
+                                    Advanced Analysis
                                 </Button>
                             </Grid>
                         )}
@@ -290,12 +332,12 @@ function MethaneMapPage() {
                             </MarkerClusterGroup>
                         )}
 
-                        {/* Plumes */}
-                        {(layerType === 'carbonMapper' || layerType === 'prediction') && carbonMapperData && (
+                        {/* 🔥 Plumes - UPDATED TO USE processedPlumes */}
+                        {(layerType === 'carbonMapper' || layerType === 'prediction') && (
                             <MarkerClusterGroup chunkedLoading>
-                                {carbonMapperData.features.map(f => (
+                                {processedPlumes.map(f => (
                                     <Marker key={f.properties.plume_id} position={[f.geometry.coordinates[1], f.geometry.coordinates[0]]} icon={getPlumeIcon(f.properties.is_predicted ? 'blue' : 'red')}>
-                                        <Popup><b>Plume ID:</b> {f.properties.plume_id}</Popup>
+                                        <Popup><b>Plume ID:</b> {f.properties.plume_id}<br/><b>Emission:</b> {f.properties.emission_auto?.toFixed(2) || 'N/A'}</Popup>
                                     </Marker>
                                 ))}
                             </MarkerClusterGroup>
@@ -303,6 +345,48 @@ function MethaneMapPage() {
                     </MapContainer>
 
                     {isLoading && <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000 }}><CircularProgress sx={{ color: '#4fd1c7' }} /></Box>}
+                
+                    {/* 🔥 THE FILTERING SIDEBAR (DRAWER) - Added at the end of Map Box */}
+                    <Drawer anchor="right" open={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} PaperProps={{ sx: { width: 350, p: 2 } }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, borderBottom: '1px solid #ccc', pb: 1 }}>
+                            <Typography variant="h6">Plume Analysis</Typography>
+                            <IconButton onClick={() => setIsSidebarOpen(false)}><CloseIcon /></IconButton>
+                        </Box>
+
+                        <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>Ranking & Sorting</Typography>
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                            <InputLabel>Plume Ranking</InputLabel>
+                            <Select value={plumeLimit} label="Plume Ranking" onChange={(e) => setPlumeLimit(e.target.value)}>
+                                <MenuItem value={'all'}>All Plumes</MenuItem>
+                                <MenuItem value={'top10'}>Top 10 Highest Emitters</MenuItem>
+                                <MenuItem value={'bottom10'}>Bottom 10 Emitters</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="body2">Order by Rate:</Typography>
+                            <Button variant="outlined" size="small" onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')} startIcon={sortDirection === 'desc' ? <ArrowDownwardIcon /> : <ArrowUpwardIcon />}>
+                                {sortDirection === 'desc' ? 'Descending' : 'Ascending'}
+                            </Button>
+                        </Box>
+
+                        <Divider sx={{ my: 2 }} />
+                        
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                            Visible Plumes ({processedPlumes.length})
+                        </Typography>
+                        <List dense sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                            {processedPlumes.map((feature, index) => (
+                                <ListItem key={feature.properties.plume_id || index} divider>
+                                    <ListItemText 
+                                        primary={`#${index + 1}: ${feature.properties.emission_auto?.toFixed(2) || 'N/A'} kg/hr`} 
+                                        secondary={`Lat: ${feature.geometry.coordinates[1].toFixed(3)}, Lon: ${feature.geometry.coordinates[0].toFixed(3)}`} 
+                                    />
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Drawer>
+                
                 </Box>
             </Box>
         </LocalizationProvider>

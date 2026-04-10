@@ -4,9 +4,10 @@
       "private": true,
       "dependencies": {
             "@changey/react-leaflet-markercluster": "^4.0.0-rc1",
-            "@emotion/react": "^11.11.1",
-            "@emotion/styled": "^11.11.0",
-            "@mui/material": "^5.14.14",
+            "@emotion/react": "^11.14.0",
+            "@emotion/styled": "^11.14.1",
+            "@mui/icons-material": "^5.18.0",
+            "@mui/material": "^5.18.0",
             "@mui/x-date-pickers": "^6.16.2",
             "dayjs": "^1.11.10",
             "leaflet": "^1.9.4",

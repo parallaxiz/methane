@@ -16,7 +16,7 @@ from PIL import Image
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 try:
     ee.Initialize(project='flash-griffin-473118-e3')
